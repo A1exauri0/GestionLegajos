@@ -1,0 +1,17 @@
+# Dependencias de paquetes
+node_modules/
+
+# Salidas de compilacion y empaquetado de Electron
+dist/
+release/
+
+# Archivos de base de datos local y temporales
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.log
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db

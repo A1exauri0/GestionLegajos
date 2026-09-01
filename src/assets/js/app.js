@@ -1,5 +1,6 @@
 $(document).ready(function () {
     let estadoGlobal = null;
+    let listaEmpleadosGlobal = [];
 
     // Helper para agregar chip de usuario en contenedores
     function agregarChipUsuario(contenedor, id, nombre) {
@@ -17,7 +18,7 @@ $(document).ready(function () {
         contenedor.append(chipHtml);
     }
 
-    // Modal helpers
+    // Modal Helpers
     function abrirModalEdicion() {
         $('#modalEditarRegistro').fadeIn(200);
         $('body').addClass('modal-open');
@@ -28,18 +29,47 @@ $(document).ready(function () {
         $('body').removeClass('modal-open');
     }
 
+    function abrirModalCatalogo() {
+        $('#modalCatalogoEmpleados').fadeIn(200);
+        $('body').addClass('modal-open');
+        cargarCatalogoEmpleados();
+    }
+
+    function cerrarModalCatalogo() {
+        $('#modalCatalogoEmpleados').fadeOut(150);
+        $('body').removeClass('modal-open');
+    }
+
     // Cargar datos de la fecha
     async function cargarEstado(fecha = null) {
         try {
             const estado = await window.api.obtenerEstado(fecha);
             estadoGlobal = estado;
+            listaEmpleadosGlobal = estado.empleados || [];
             renderizarVista(estado);
         } catch (err) {
             Swal.fire({ icon: 'error', title: 'Error', text: err.message });
         }
     }
 
-    // Renderizar la vista
+    // Actualizar los dropdowns de empleados con la lista actual
+    function actualizarDropdownsEmpleados(empleados) {
+        listaEmpleadosGlobal = empleados;
+        const $selectEmpReg = $('#selectEmpleadoRegistro').empty().append('<option value="">-- Seleccionar Empleado --</option>');
+        const $selectEmpMod = $('#selectEmpleadoModal').empty().append('<option value="">-- Seleccionar Empleado --</option>');
+
+        if (empleados.length === 0) {
+            $selectEmpReg.append('<option value="" disabled>No hay empleados registrados en el catálogo</option>');
+            $selectEmpMod.append('<option value="" disabled>No hay empleados registrados en el catálogo</option>');
+        } else {
+            empleados.forEach(emp => {
+                $selectEmpReg.append(`<option value="${emp.id}">${emp.name}</option>`);
+                $selectEmpMod.append(`<option value="${emp.id}">${emp.name}</option>`);
+            });
+        }
+    }
+
+    // Renderizar la vista principal
     function renderizarVista(data) {
         $('#inputFechaTurno').val(data.fecha);
 
@@ -65,22 +95,10 @@ $(document).ready(function () {
             $('#seccionFormularioCaptura').hide();
         }
 
-        // KPIs
-        $('#kpiVolumenes').text(data.totalVolumenes.toLocaleString());
-        $('#kpiHojas').text(data.totalHojas.toLocaleString());
-        $('#kpiEmpleados').text(data.totalEmpleados);
-        $('#kpiFinalizados').text(`${data.totalFinalizados} Fin.`);
-        $('#kpiEnProceso').text(`${data.totalEnProceso} Proc.`);
-        $('#kpiPendientes').text(`${data.totalPendientes} Pend.`);
         $('#footerTotalHojas').text(data.totalHojas.toLocaleString());
 
-        // Llenar selects de empleados y delegaciones
-        const $selectEmpReg = $('#selectEmpleadoRegistro').empty().append('<option value="">-- Seleccionar Empleado --</option>');
-        const $selectEmpMod = $('#selectEmpleadoModal').empty().append('<option value="">-- Seleccionar Empleado --</option>');
-        data.empleados.forEach(emp => {
-            $selectEmpReg.append(`<option value="${emp.id}">${emp.name}</option>`);
-            $selectEmpMod.append(`<option value="${emp.id}">${emp.name}</option>`);
-        });
+        // Llenar selects
+        actualizarDropdownsEmpleados(data.empleados || []);
 
         const $selectDelReg = $('#inputDelegacionId').empty().append('<option value="">-- Seleccionar --</option>');
         const $selectDelMod = $('#editDelegacionId').empty().append('<option value="">-- Sin Delegación --</option>');
@@ -177,7 +195,162 @@ $(document).ready(function () {
         }
     }
 
-    // Eventos de selección de empleados (chips acumulados)
+    // ==========================================
+    // LÓGICA DEL CATÁLOGO DE EMPLEADOS
+    // ==========================================
+
+    async function cargarCatalogoEmpleados() {
+        try {
+            const empleados = await window.api.obtenerEmpleados();
+            renderizarTablaCatalogoEmpleados(empleados);
+            actualizarDropdownsEmpleados(empleados);
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+        }
+    }
+
+    function renderizarTablaCatalogoEmpleados(empleados, filtro = '') {
+        const $tbody = $('#tbodyCatalogoEmpleados').empty();
+        let lista = empleados || [];
+
+        if (filtro && filtro.trim()) {
+            const q = filtro.trim().toUpperCase();
+            lista = lista.filter(e => e.name.toUpperCase().includes(q) || (e.turno && e.turno.toUpperCase().includes(q)));
+        }
+
+        $('#totalEmpleadosCatalogoBadge').text(lista.length);
+
+        if (lista.length === 0) {
+            $tbody.append('<tr><td colspan="4" class="text-center text-muted py-3">No hay empleados registrados.</td></tr>');
+            return;
+        }
+
+        lista.forEach(emp => {
+            $tbody.append(`
+                <tr>
+                    <td class="font-weight-bold text-muted">${emp.id}</td>
+                    <td class="font-weight-bold text-dark">${emp.name}</td>
+                    <td class="text-muted">${emp.turno || '-'}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 btn-editar-empleado-cat" data-id="${emp.id}" data-nombre="${emp.name}" data-turno="${emp.turno || ''}" title="Editar">
+                            <i class="mdi mdi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 btn-eliminar-empleado-cat ml-1" data-id="${emp.id}" data-nombre="${emp.name}" title="Eliminar">
+                            <i class="mdi mdi-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+
+    // Abrir y cerrar catálogo
+    $('#btnAbrirCatalogoEmpleados').on('click', abrirModalCatalogo);
+    $('.btn-cerrar-catalogo').on('click', cerrarModalCatalogo);
+    $('#modalCatalogoEmpleados').on('click', function (e) {
+        if ($(e.target).is('#modalCatalogoEmpleados')) cerrarModalCatalogo();
+    });
+
+    // Filtro buscador del catálogo
+    $('#inputBuscarEmpleadoCatalogo').on('input', function () {
+        renderizarTablaCatalogoEmpleados(listaEmpleadosGlobal, $(this).val());
+    });
+
+    // Guardar nuevo empleado
+    $('#formNuevoEmpleado').on('submit', async function (e) {
+        e.preventDefault();
+        const nombre = $('#inputNombreEmpleado').val();
+        const turno = $('#inputTurnoEmpleado').val();
+
+        if (!nombre || !nombre.trim()) {
+            Swal.fire({ icon: 'warning', title: 'Nombre requerido', text: 'Ingresa el nombre del empleado.' });
+            return;
+        }
+
+        const res = await window.api.crearEmpleado({ name: nombre, turno });
+        if (res.success) {
+            $('#inputNombreEmpleado').val('');
+            $('#inputTurnoEmpleado').val('');
+            Swal.fire({ icon: 'success', title: 'Empleado Agregado', text: res.message, timer: 1000, showConfirmButton: false });
+            cargarCatalogoEmpleados();
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: res.message });
+        }
+    });
+
+    // Editar empleado del catálogo
+    $(document).on('click', '.btn-editar-empleado-cat', async function () {
+        const id = $(this).data('id');
+        const nombreActual = $(this).data('nombre');
+        const turnoActual = $(this).data('turno');
+
+        const { value: formValues } = await Swal.fire({
+            title: 'Editar Empleado',
+            html: `
+                <div class="text-left">
+                    <label class="font-weight-bold mb-1" style="font-size: 0.85rem;">Nombre Completo:</label>
+                    <input id="swal-edit-nombre" class="swal2-input mt-0 mb-3" style="width: 100%;" value="${nombreActual}">
+                    <label class="font-weight-bold mb-1" style="font-size: 0.85rem;">Turno (Opcional):</label>
+                    <input id="swal-edit-turno" class="swal2-input mt-0" style="width: 100%;" value="${turnoActual}">
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Guardar Cambios',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const n = document.getElementById('swal-edit-nombre').value;
+                const t = document.getElementById('swal-edit-turno').value;
+                if (!n || !n.trim()) {
+                    Swal.showValidationMessage('El nombre no puede estar vacío');
+                    return false;
+                }
+                return { name: n, turno: t };
+            }
+        });
+
+        if (formValues) {
+            const res = await window.api.actualizarEmpleado(id, formValues);
+            if (res.success) {
+                Swal.fire({ icon: 'success', title: 'Actualizado', text: res.message, timer: 1000, showConfirmButton: false });
+                cargarCatalogoEmpleados();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message });
+            }
+        }
+    });
+
+    // Eliminar empleado del catálogo
+    $(document).on('click', '.btn-eliminar-empleado-cat', async function () {
+        const id = $(this).data('id');
+        const nombre = $(this).data('nombre');
+
+        const confirm = await Swal.fire({
+            title: '¿Eliminar empleado del catálogo?',
+            text: `Se eliminará a ${nombre}`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (confirm.isConfirmed) {
+            const res = await window.api.eliminarEmpleado(id);
+            if (res.success) {
+                Swal.fire({ icon: 'success', title: 'Eliminado', text: res.message, timer: 900, showConfirmButton: false });
+                cargarCatalogoEmpleados();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message });
+            }
+        }
+    });
+
+    // ==========================================
+    // EVENTOS DE REGISTRO DE LEGAJOS
+    // ==========================================
+
     $('#selectEmpleadoRegistro').on('change', function () {
         const id = $(this).val();
         const nombre = $(this).find('option:selected').text();

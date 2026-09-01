@@ -74,7 +74,7 @@ class AuditoriaLegajosController {
             }
         }
 
-        // Totales y KPIs
+        // Totales
         const totalVolumenes = registros.length;
         const totalHojas = registros.reduce((sum, r) => sum + (Number(r.numero_hojas) || 0), 0);
         const totalFinalizados = registros.filter(r => r.estado === 'finalizado').length;
@@ -419,6 +419,81 @@ class AuditoriaLegajosController {
         return {
             success: true,
             message: 'El turno ha sido reabierto exitosamente.'
+        };
+    }
+
+    // ==========================================
+    // MÉTODOS DEL CATÁLOGO DE EMPLEADOS / USUARIOS
+    // ==========================================
+
+    /**
+     * Obtiene la lista completa de empleados.
+     */
+    static obtenerEmpleados() {
+        return db.prepare('SELECT * FROM empleados WHERE estatus = 1 ORDER BY name ASC').all();
+    }
+
+    /**
+     * Agrega un nuevo empleado al catálogo.
+     */
+    static crearEmpleado(datos) {
+        const { name, turno } = datos;
+        if (!name || !name.trim()) {
+            return { success: false, message: 'El nombre del empleado es obligatorio.' };
+        }
+
+        const nombreLimpio = name.trim().toUpperCase();
+
+        const existente = db.prepare('SELECT id FROM empleados WHERE name = ? AND estatus = 1').get(nombreLimpio);
+        if (existente) {
+            return { success: false, message: 'Ya existe un empleado con ese nombre.' };
+        }
+
+        const res = db.prepare(`
+            INSERT INTO empleados (name, turno, estatus, created_at)
+            VALUES (?, ?, 1, datetime('now', 'localtime'))
+        `).run(nombreLimpio, turno ? turno.trim() : null);
+
+        return {
+            success: true,
+            message: 'Empleado agregado exitosamente al catálogo.',
+            id: res.lastInsertRowid,
+            empleados: this.obtenerEmpleados()
+        };
+    }
+
+    /**
+     * Actualiza los datos de un empleado.
+     */
+    static actualizarEmpleado(id, datos) {
+        const { name, turno } = datos;
+        if (!name || !name.trim()) {
+            return { success: false, message: 'El nombre del empleado es obligatorio.' };
+        }
+
+        const nombreLimpio = name.trim().toUpperCase();
+
+        db.prepare(`
+            UPDATE empleados SET name = ?, turno = ? WHERE id = ?
+        `).run(nombreLimpio, turno ? turno.trim() : null, id);
+
+        return {
+            success: true,
+            message: 'Empleado actualizado correctamente.',
+            empleados: this.obtenerEmpleados()
+        };
+    }
+
+    /**
+     * Elimina un empleado del catálogo.
+     */
+    static eliminarEmpleado(id) {
+        db.prepare('DELETE FROM empleados WHERE id = ?').run(id);
+
+        return {
+            success: true,
+            message: 'Empleado eliminado del catálogo.',
+            empleados: this.obtenerEmpleados()
         };
     }
 }

@@ -17,7 +17,10 @@
             <i class="mdi mdi-folder-multiple-check mr-2" style="font-size: 1.6rem;"></i>
             <span class="app-title">Gestión y Auditoría de Legajos</span>
         </div>
-        <div class="d-flex align-items-center">
+        <div class="d-flex align-items-center" style="gap: 8px;">
+            <button type="button" id="btnAbrirCatalogoEmpleados" class="btn btn-light btn-sm font-weight-bold text-primary shadow-sm">
+                <i class="mdi mdi-account-group"></i> Catálogo de Empleados
+            </button>
             <span class="badge badge-light px-2 py-1 font-weight-bold" id="badgeTurnoEstado">Consultando...</span>
         </div>
     </header>
@@ -48,37 +51,6 @@
                         <button type="button" id="btnRecargar" class="btn btn-outline-secondary btn-sm" title="Recargar datos">
                             <i class="mdi mdi-refresh"></i>
                         </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TARJETAS DE KPIS -->
-        <div class="row mb-3">
-            <div class="col-md-4 col-sm-6 mb-2">
-                <div class="card kpi-card shadow-sm mb-0">
-                    <div class="card-body py-2 px-3">
-                        <div class="text-muted text-uppercase" style="font-size: 0.75rem; font-weight: 700;">Carpetas / Volúmenes</div>
-                        <div class="h4 font-weight-bold text-dark mb-0" id="kpiVolumenes">0</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-6 mb-2">
-                <div class="card kpi-card shadow-sm mb-0" style="border-left-color: #17a2b8;">
-                    <div class="text-muted text-uppercase" style="font-size: 0.75rem; font-weight: 700;">Total de Hojas</div>
-                    <div class="h4 font-weight-bold text-info mb-0" id="kpiHojas">0</div>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-12 mb-2">
-                <div class="card kpi-card shadow-sm mb-0" style="border-left-color: #28a745;">
-                    <div class="text-muted text-uppercase" style="font-size: 0.75rem; font-weight: 700;">Empleados Activos</div>
-                    <div class="d-flex align-items-baseline justify-content-between">
-                        <div class="h4 font-weight-bold text-success mb-0" id="kpiEmpleados">0</div>
-                        <div style="font-size: 0.8rem; font-weight: 600;">
-                            <span class="text-success" id="kpiFinalizados">0 Fin.</span> |
-                            <span class="text-warning" id="kpiEnProceso">0 Proc.</span> |
-                            <span class="text-danger" id="kpiPendientes">0 Pend.</span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -271,6 +243,74 @@
                         <button type="submit" class="btn btn-primary btn-sm font-weight-bold" id="btnGuardarCambiosEdit">Guardar Cambios</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CATÁLOGO DE EMPLEADOS -->
+    <div class="modal-custom" id="modalCatalogoEmpleados">
+        <div class="modal-dialog-custom" style="max-width: 700px;">
+            <div class="modal-content-custom">
+                <div class="modal-header bg-primary text-white py-2 px-3 d-flex justify-content-between align-items-center">
+                    <h6 class="modal-title font-weight-bold mb-0"><i class="mdi mdi-account-group"></i> Catálogo de Empleados / Usuarios</h6>
+                    <button type="button" class="close text-white btn-cerrar-catalogo" style="font-size: 1.5rem; border: none; background: transparent; cursor: pointer;">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-3">
+                    
+                    <!-- Formulario para registrar nuevo empleado -->
+                    <div class="card bg-light border mb-3">
+                        <div class="card-body p-3">
+                            <h6 class="font-weight-bold text-dark mb-2" style="font-size: 0.9rem;">
+                                <i class="mdi mdi-account-plus text-success"></i> Registrar Nuevo Empleado
+                            </h6>
+                            <form id="formNuevoEmpleado" class="row align-items-end">
+                                <div class="col-sm-7 mb-2">
+                                    <label class="form-label font-weight-bold mb-1" style="font-size: 0.8rem;">Nombre Completo:</label>
+                                    <input type="text" id="inputNombreEmpleado" class="form-control form-control-sm" placeholder="Ej. JUAN PÉREZ LÓPEZ" required autocomplete="off">
+                                </div>
+                                <div class="col-sm-3 mb-2">
+                                    <label class="form-label font-weight-bold mb-1" style="font-size: 0.8rem;">Turno (Opcional):</label>
+                                    <input type="text" id="inputTurnoEmpleado" class="form-control form-control-sm" placeholder="Ej. Matutino">
+                                </div>
+                                <div class="col-sm-2 mb-2">
+                                    <button type="submit" id="btnAgregarEmpleado" class="btn btn-success btn-sm btn-block font-weight-bold">
+                                        <i class="mdi mdi-plus"></i> Agregar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Buscador y Tabla de Empleados -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="font-weight-bold text-dark mb-0" style="font-size: 0.9rem;">
+                            Empleados Registrados (<span id="totalEmpleadosCatalogoBadge">0</span>)
+                        </h6>
+                        <input type="text" id="inputBuscarEmpleadoCatalogo" class="form-control form-control-sm" placeholder="Buscar por nombre..." style="max-width: 220px;">
+                    </div>
+
+                    <div class="table-responsive border rounded" style="max-height: 320px; overflow-y: auto;">
+                        <table class="table table-sm table-striped table-hover mb-0" style="font-size: 0.86rem;">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th style="width: 10%;">ID</th>
+                                    <th style="width: 55%;">Nombre del Empleado</th>
+                                    <th style="width: 20%;">Turno</th>
+                                    <th class="text-center" style="width: 15%;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyCatalogoEmpleados">
+                                <!-- Filas dinámicas -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+                <div class="modal-footer py-2 px-3">
+                    <button type="button" class="btn btn-secondary btn-sm btn-cerrar-catalogo">Cerrar</button>
+                </div>
             </div>
         </div>
     </div>

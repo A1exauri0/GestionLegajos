@@ -22,8 +22,6 @@ function createWindow() {
 
     mainWindow.loadFile(path.join(__dirname, 'src/views/index.html'));
     mainWindow.setMenuBarVisibility(false);
-
-    // mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
@@ -73,4 +71,21 @@ ipcMain.handle('reabrir-turno', async (event, turnoId) => {
 
 ipcMain.handle('exportar-excel', async (event, turnoId) => {
     return ExportadorExcel.exportarTurno(turnoId, mainWindow);
+});
+
+// Handlers del Catálogo de Empleados
+ipcMain.handle('obtener-empleados', async () => {
+    return AuditoriaLegajosController.obtenerEmpleados();
+});
+
+ipcMain.handle('crear-empleado', async (event, datos) => {
+    return AuditoriaLegajosController.crearEmpleado(datos);
+});
+
+ipcMain.handle('actualizar-empleado', async (event, { id, datos }) => {
+    return AuditoriaLegajosController.actualizarEmpleado(id, datos);
+});
+
+ipcMain.handle('eliminar-empleado', async (event, id) => {
+    return AuditoriaLegajosController.eliminarEmpleado(id);
 });

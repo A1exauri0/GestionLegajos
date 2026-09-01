@@ -38,7 +38,7 @@ function inicializarBaseDatos() {
         );
     `);
 
-    // 2. Tabla de empleados / usuarios
+    // 2. Tabla de empleados / usuarios (inicia en limpio)
     db.exec(`
         CREATE TABLE IF NOT EXISTS empleados (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,11 +93,11 @@ function inicializarBaseDatos() {
         );
     `);
 
-    // Sembrar catálogos si están vacíos
-    sembrarCatalogos();
+    // Sembrar únicamente las 19 delegaciones oficiales
+    sembrarDelegaciones();
 }
 
-function sembrarCatalogos() {
+function sembrarDelegaciones() {
     const totalDelegaciones = db.prepare('SELECT COUNT(*) as total FROM delegaciones').get().total;
     if (totalDelegaciones === 0) {
         const delegacionesOficiales = [
@@ -111,20 +111,7 @@ function sembrarCatalogos() {
             for (const d of lista) stmt.run(d);
         });
         insertMany(delegacionesOficiales);
-        console.log('Delegaciones iniciales sembradas.');
-    }
-
-    const totalEmpleados = db.prepare('SELECT COUNT(*) as total FROM empleados').get().total;
-    if (totalEmpleados === 0) {
-        const catalogoEmpleados = require('./empleados_seed.json');
-        const stmt = db.prepare("INSERT OR IGNORE INTO empleados (id, name, turno, estatus, created_at) VALUES (?, ?, ?, 1, datetime('now', 'localtime'))");
-        const insertMany = db.transaction((lista) => {
-            for (const emp of lista) {
-                stmt.run(emp.id, emp.name, emp.turno || null);
-            }
-        });
-        insertMany(catalogoEmpleados);
-        console.log('Empleados iniciales sembrados.');
+        console.log('Delegaciones oficiales sembradas.');
     }
 }
 

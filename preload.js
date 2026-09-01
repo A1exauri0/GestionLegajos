@@ -9,5 +9,11 @@ contextBridge.exposeInMainWorld('api', {
     eliminarRegistro: (id) => ipcRenderer.invoke('eliminar-registro', id),
     finalizarTurno: (turnoId) => ipcRenderer.invoke('finalizar-turno', turnoId),
     reabrirTurno: (turnoId) => ipcRenderer.invoke('reabrir-turno', turnoId),
-    exportarExcel: (turnoId) => ipcRenderer.invoke('exportar-excel', turnoId)
+    exportarExcel: (turnoId) => ipcRenderer.invoke('exportar-excel', turnoId),
+
+    // Catálogo de Empleados
+    obtenerEmpleados: () => ipcRenderer.invoke('obtener-empleados'),
+    crearEmpleado: (datos) => ipcRenderer.invoke('crear-empleado', datos),
+    actualizarEmpleado: (id, datos) => ipcRenderer.invoke('actualizar-empleado', { id, datos }),
+    eliminarEmpleado: (id) => ipcRenderer.invoke('eliminar-empleado', id)
 });

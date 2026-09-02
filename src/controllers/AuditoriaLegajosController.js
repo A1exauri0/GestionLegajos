@@ -3,25 +3,37 @@ const db = require('../database/connection');
 class AuditoriaLegajosController {
 
     /**
+     * Obtiene la fecha local actual en formato YYYY-MM-DD.
+     */
+    static obtenerFechaHoy() {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    /**
      * Obtiene el estado completo de la vista para la fecha seleccionada.
      */
     static obtenerEstado(fecha) {
-        if (!fecha) {
-            // Buscar turno abierto más reciente o usar hoy
-            const turnoAbierto = db.prepare(`
-                SELECT * FROM turnos_legajos WHERE estatus = 'abierto' ORDER BY fecha DESC LIMIT 1
-            `).get();
+        const hoy = this.obtenerFechaHoy();
 
-            if (turnoAbierto) {
-                fecha = turnoAbierto.fecha;
-            } else {
-                fecha = new Date().toISOString().split('T')[0];
-            }
+        if (!fecha) {
+            fecha = hoy;
         }
 
         let turnoActual = db.prepare('SELECT * FROM turnos_legajos WHERE fecha = ?').get(fecha) || null;
         let registros = [];
         let totalEmpleados = 0;
+
+        // Detectar si existe un turno anterior a hoy que haya quedado abierto
+        const turnoAnteriorAbierto = db.prepare(`
+            SELECT * FROM turnos_legajos
+            WHERE fecha < ? AND estatus = 'abierto'
+            ORDER BY fecha DESC
+            LIMIT 1
+        `).get(hoy) || null;
 
         if (turnoActual) {
             // Obtener registros de legajos con delegación
@@ -99,7 +111,9 @@ class AuditoriaLegajosController {
 
         return {
             fecha,
+            hoy,
             turnoActual,
+            turnoAnteriorAbierto,
             registros,
             totalVolumenes,
             totalHojas,
@@ -399,7 +413,7 @@ class AuditoriaLegajosController {
 
         return {
             success: true,
-            message: 'El turno diario ha sido finalizado exitosamente. Los registros no marcados han pasado a estado pendiente.'
+            message: `El turno del día ${turno.fecha} ha sido finalizado. Los registros pendientes han sido asegurados.`
         };
     }
 
@@ -426,16 +440,10 @@ class AuditoriaLegajosController {
     // MÉTODOS DEL CATÁLOGO DE EMPLEADOS / USUARIOS
     // ==========================================
 
-    /**
-     * Obtiene la lista completa de empleados.
-     */
     static obtenerEmpleados() {
         return db.prepare('SELECT * FROM empleados WHERE estatus = 1 ORDER BY name ASC').all();
     }
 
-    /**
-     * Agrega un nuevo empleado al catálogo.
-     */
     static crearEmpleado(datos) {
         const { name, turno } = datos;
         if (!name || !name.trim()) {
@@ -462,9 +470,6 @@ class AuditoriaLegajosController {
         };
     }
 
-    /**
-     * Actualiza los datos de un empleado.
-     */
     static actualizarEmpleado(id, datos) {
         const { name, turno } = datos;
         if (!name || !name.trim()) {
@@ -484,9 +489,6 @@ class AuditoriaLegajosController {
         };
     }
 
-    /**
-     * Elimina un empleado del catálogo.
-     */
     static eliminarEmpleado(id) {
         db.prepare('DELETE FROM empleados WHERE id = ?').run(id);
 

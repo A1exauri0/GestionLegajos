@@ -9,6 +9,7 @@
         "dist": "electron-builder"
     },
     "dependencies": {
+        "@mdi/font": "^7.4.47",
         "better-sqlite3": "^11.8.1",
         "exceljs": "^4.4.0"
     },

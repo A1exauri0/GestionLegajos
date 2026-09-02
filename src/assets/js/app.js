@@ -1,6 +1,7 @@
 $(document).ready(function () {
     let estadoGlobal = null;
     let listaEmpleadosGlobal = [];
+    let avisoTurnoAnteriorMostrado = false;
 
     // Helper para agregar chip de usuario en contenedores
     function agregarChipUsuario(contenedor, id, nombre) {
@@ -41,12 +42,48 @@ $(document).ready(function () {
     }
 
     // Cargar datos de la fecha
-    async function cargarEstado(fecha = null) {
+    async function cargarEstado(fecha = null, esInicio = false) {
         try {
             const estado = await window.api.obtenerEstado(fecha);
             estadoGlobal = estado;
             listaEmpleadosGlobal = estado.empleados || [];
             renderizarVista(estado);
+
+            // Verificar si hay un turno anterior abierto al iniciar la aplicación
+            if (esInicio && !avisoTurnoAnteriorMostrado && estado.turnoAnteriorAbierto) {
+                avisoTurnoAnteriorMostrado = true;
+                const turnoAnt = estado.turnoAnteriorAbierto;
+
+                setTimeout(async () => {
+                    const confirmacion = await Swal.fire({
+                        title: 'Turno anterior abierto',
+                        html: `El turno de la jornada <b>${turnoAnt.fecha}</b> quedó abierto.<br><br>¿Deseas finalizarlo ahora para asegurar los pendientes y poder arrastrarlos a la jornada de hoy (${estado.hoy})?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Sí, finalizar turno anterior',
+                        cancelButtonText: 'Mantener abierto / Más tarde'
+                    });
+
+                    if (confirmacion.isConfirmed) {
+                        const res = await window.api.finalizarTurno(turnoAnt.id);
+                        if (res.success) {
+                            await Swal.fire({
+                                icon: 'success',
+                                title: 'Turno Anterior Finalizado',
+                                text: res.message,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                            // Recargar el día de hoy
+                            cargarEstado(estado.hoy);
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: res.message });
+                        }
+                    }
+                }, 300);
+            }
         } catch (err) {
             Swal.fire({ icon: 'error', title: 'Error', text: err.message });
         }
@@ -320,7 +357,7 @@ $(document).ready(function () {
         }
     });
 
-    // Eliminar empleado del catálogo
+    // Eliminar empleado del catálogo (con SweetAlert2 al frente del modal)
     $(document).on('click', '.btn-eliminar-empleado-cat', async function () {
         const id = $(this).data('id');
         const nombre = $(this).data('nombre');
@@ -654,6 +691,6 @@ $(document).ready(function () {
         }
     });
 
-    // Inicializar cargando el día actual
-    cargarEstado();
+    // Inicializar cargando el día actual y verificando turno anterior abierto
+    cargarEstado(null, true);
 });
